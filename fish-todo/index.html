@@ -5,8 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1017" id="themeColor">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="鱼鱼清单">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no,email=no,address=no">
+<meta name="msapplication-tap-highlight" content="no">
 <title>鱼鱼清单</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%90%9F%3C/text%3E%3C/svg%3E">
 <style>
@@ -606,6 +609,57 @@ function ruleText(t) {
    ========================================================= */
 var mql = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
 
+/* --- iOS 相关 --- */
+function isIOS() {
+  var ua = navigator.userAgent || '';
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  // iPadOS 13+ 会伪装成 Mac
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+}
+
+function isStandalone() {
+  if (window.navigator.standalone === true) return true;
+  try {
+    return window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  } catch (e) { return false; }
+}
+
+/* iOS 不认 svg 图标，这里用 canvas 现场画一张，Safari「添加到主屏幕」时就有图了 */
+function makeTouchIcon() {
+  try {
+    var c = document.createElement('canvas');
+    c.width = 180;
+    c.height = 180;
+    var g = c.getContext('2d');
+    if (!g) return;
+
+    var grad = g.createLinearGradient(0, 0, 180, 180);
+    grad.addColorStop(0, '#5cb8ff');
+    grad.addColorStop(1, '#9b7cff');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 180, 180);
+
+    g.strokeStyle = '#ffffff';
+    g.lineWidth = 15;
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.beginPath();
+    g.moveTo(56, 92);
+    g.lineTo(80, 118);
+    g.lineTo(126, 62);
+    g.stroke();
+
+    var url = c.toDataURL('image/png');
+    ['apple-touch-icon', 'apple-touch-icon-precomposed'].forEach(function (rel) {
+      var l = document.createElement('link');
+      l.setAttribute('rel', rel);
+      l.setAttribute('sizes', '180x180');
+      l.setAttribute('href', url);
+      document.head.appendChild(l);
+    });
+  } catch (e) { }
+}
+
 function applyTheme() {
   var t = DB.settings.theme;
   var actual = t;
@@ -630,6 +684,17 @@ function toast(msg, ms) {
 }
 
 var ac = null;
+
+/* iOS 要求音频必须在用户手势里解锁，否则提醒时不发声 */
+function unlockAudio() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    ac = ac || new Ctx();
+    if (ac.state === 'suspended') ac.resume();
+  } catch (e) { }
+}
+
 function playBeep() {
   if (!DB.settings.sound) return;
   try {
@@ -960,6 +1025,15 @@ function viewSettings() {
     + '<h1 class="page-title">设置</h1>'
     + '<div class="page-sub">提醒、日历、备份都在这里</div>'
     + '</div></div>';
+
+  if (isIOS() && !isStandalone()) {
+    html += '<div class="card" style="background:rgba(92,184,255,.10);border-color:rgba(92,184,255,.30);box-shadow:none">'
+      + '<div style="font-size:12.5px;line-height:1.75;color:var(--text)">'
+      + '📱 <b>装到 iPhone 桌面上</b><br>'
+      + '点 Safari 底部的 <b>分享</b> 按钮 → 往下翻一点 → <b>添加到主屏幕</b>。'
+      + '之后从桌面点开就是全屏的，没有地址栏。'
+      + '</div></div>';
+  }
 
   html += '<div class="stat-row">'
     + '<div class="stat"><b>' + DB.tasks.length + '</b><span>任务</span></div>'
@@ -1433,6 +1507,25 @@ function downloadFile(name, text, mime) {
   }
 }
 
+/* iPhone / iPad 上，把 ics 交给系统分享面板，「日历」就在里面 */
+function shareICS(name, txt) {
+  try {
+    if (!navigator.share || !navigator.canShare) return false;
+    if (typeof File !== 'function') return false;
+
+    var file = new File([txt], name, { type: 'text/calendar' });
+    if (!navigator.canShare({ files: [file] })) return false;
+
+    navigator.share({ files: [file], title: '导入到日历' }).then(function () {
+      toast('分享好了，选「日历」就能导入', 5000);
+    }).catch(function () { });
+
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function exportCalendar(days) {
   days = Number(days) || 7;
   var base = new Date();
@@ -1445,7 +1538,7 @@ function exportCalendar(days) {
   var txt = buildICS(dates);
   var name = 'fishtodo-' + todayStr().replace(/-/g, '') + '.ics';
 
-  // 装成 App 时，交给原生写文件 + 唤起日历（WebView 里浏览器下载是没反应的）
+  // ① 装成安卓 App 时，交给原生写文件 + 唤起日历（WebView 里浏览器下载是没反应的）
   var bridge = window.AndroidBridge;
   if (bridge && bridge.saveAndOpen) {
     var r = '';
@@ -1458,6 +1551,10 @@ function exportCalendar(days) {
     if (r === 'saved') { toast('文件存好了，去文件管理里找 ' + name, 6000); return; }
   }
 
+  // ② iPhone / iPad：走系统分享，选「日历」直接导进去
+  if (shareICS(name, txt)) return;
+
+  // ③ 兜底：普通下载
   var ok = downloadFile(name, txt, 'text/calendar;charset=utf-8');
   toast(ok ? '导出好了，点开文件导入系统日历' : '导出失败，换个浏览器再试', 5000);
 }
@@ -1716,6 +1813,21 @@ function onViewChange(e) {
 /* =========================================================
    10. 启动
    ========================================================= */
+/* 只在 https 下注册；file:// 打开时静静跳过，不影响使用 */
+function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  if (location.protocol !== 'https:') return;
+
+  var go = function () {
+    try {
+      navigator.serviceWorker.register('sw.js').catch(function () { });
+    } catch (e) { }
+  };
+
+  if (document.readyState === 'complete') go();
+  else window.addEventListener('load', go);
+}
+
 function seed() {
   DB.tasks.push({
     id: uid(),
@@ -1738,6 +1850,8 @@ function seed() {
 var lastMinute = -1;
 
 function boot() {
+  makeTouchIcon();
+
   var firstRun = false;
   try { firstRun = !localStorage.getItem(KEY); } catch (e) { firstRun = false; }
 
@@ -1752,6 +1866,8 @@ function boot() {
   render();
 
   document.addEventListener('click', onClick);
+  document.addEventListener('touchend', unlockAudio, { passive: true });
+  registerSW();
   var sb = $('#sheetBody');
   if (sb) sb.addEventListener('input', onSheetInput);
   var vw = $('#view');
