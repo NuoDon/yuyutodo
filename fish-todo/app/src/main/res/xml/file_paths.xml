@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- getExternalFilesDir(DIRECTORY_DOCUMENTS) -->
+    <external-files-path name="documents" path="Documents/" />
+    <!-- 兜底：getFilesDir() -->
+    <files-path name="internal" path="." />
+</paths>

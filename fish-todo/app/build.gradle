@@ -1,0 +1,61 @@
+plugins {
+    id 'com.android.application'
+}
+
+/* ------------------------------------------------------------------
+   网页部分直接用仓库根目录的 index.html，
+   这里在配置阶段把它拷进 build/webassets，再当成 assets 打包。
+   ------------------------------------------------------------------ */
+def webSource = file("$rootDir/index.html")
+def webAssets = file("$buildDir/webassets")
+
+if (!webSource.exists()) {
+    throw new GradleException("找不到 index.html：${webSource}\n请确认 index.html 在仓库根目录（和 settings.gradle 同一层）。")
+}
+
+webAssets.mkdirs()
+copy {
+    from webSource
+    into webAssets
+}
+
+android {
+    namespace 'com.yuyu.todo'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.yuyu.todo"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main {
+            // 只放 index.html，别的文件不进包
+            assets.srcDirs = [webAssets]
+        }
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.13.1'
+    implementation 'androidx.webkit:webkit:1.11.0'
+}

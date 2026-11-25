@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1017" id="themeColor">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="鱼鱼清单">
+<title>鱼鱼清单</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%90%9F%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0b1017; --card:#151d28; --card2:#1b2532;
+  --line:rgba(255,255,255,.085);
+  --text:#e8eef7; --sub:#8c9bab; --faint:#5d6b7c;
+  --accent:#5cb8ff; --accent2:#9b7cff;
+  --ok:#3fd6a0; --warn:#ffb54a; --danger:#ff6b6b;
+  --sh:0 10px 28px rgba(0,0,0,.30);
+  --tabbar-bg:rgba(11,16,23,.84);
+  --r:18px;
+}
+[data-theme="light"]{
+  --bg:#f2f5fa; --card:#ffffff; --card2:#edf2fa;
+  --line:rgba(20,40,70,.09);
+  --text:#111a26; --sub:#68788d; --faint:#9aa8ba;
+  --accent:#3d8bfd; --accent2:#7c5cff;
+  --ok:#0fb87e; --warn:#e0890f; --danger:#e5484d;
+  --sh:0 8px 22px rgba(25,45,80,.07);
+  --tabbar-bg:rgba(255,255,255,.86);
+}
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  background:var(--bg);color:var(--text);
+  -webkit-font-smoothing:antialiased;overflow:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(40rem 26rem at 12% -8%,rgba(92,184,255,.16),transparent 62%),
+    radial-gradient(34rem 24rem at 105% 4%,rgba(155,124,255,.14),transparent 62%);
+}
+[data-theme="light"] body::before{
+  background:
+    radial-gradient(40rem 26rem at 12% -8%,rgba(61,139,253,.13),transparent 62%),
+    radial-gradient(34rem 24rem at 105% 4%,rgba(124,92,255,.10),transparent 62%);
+}
+.app{height:100vh;height:100dvh;display:flex;flex-direction:column;position:relative;z-index:1}
+.view{
+  flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  padding:calc(env(safe-area-inset-top) + 14px) 16px calc(104px + env(safe-area-inset-bottom));
+}
+.view::-webkit-scrollbar{width:0;height:0}
+
+/* ---------- tabbar ---------- */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:20;
+  display:grid;grid-template-columns:repeat(4,1fr);
+  height:calc(62px + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);
+  background:var(--tabbar-bg);
+  backdrop-filter:blur(20px) saturate(150%);
+  -webkit-backdrop-filter:blur(20px) saturate(150%);
+  border-top:1px solid var(--line);
+}
+.tab{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  background:none;border:0;color:var(--faint);font-size:10.5px;font-family:inherit;
+  cursor:pointer;padding:0;transition:color .16s;
+}
+.tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.tab.on{color:var(--accent)}
+.tab:active{opacity:.6}
+
+.fab{
+  position:fixed;right:18px;z-index:30;
+  bottom:calc(78px + env(safe-area-inset-bottom));
+  width:56px;height:56px;border-radius:50%;border:0;
+  background:linear-gradient(145deg,var(--accent),var(--accent2));
+  color:#fff;font-size:27px;line-height:1;font-weight:300;font-family:inherit;
+  box-shadow:0 10px 26px rgba(92,184,255,.36);
+  cursor:pointer;display:grid;place-items:center;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1),opacity .2s;
+}
+.fab:active{transform:scale(.9)}
+.fab.hide{opacity:0;pointer-events:none;transform:scale(.6)}
+
+/* ---------- page head ---------- */
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:4px 4px 16px}
+.page-title{font-size:25px;font-weight:650;letter-spacing:-.5px;line-height:1.22;margin:0}
+.page-title span{font-size:15px;font-weight:500;color:var(--sub);margin-left:6px;letter-spacing:0}
+.page-sub{font-size:12.5px;color:var(--sub);margin-top:6px;line-height:1.5}
+
+/* ---------- ring ---------- */
+.ring{position:relative;width:64px;height:64px;flex:none}
+.ring svg{width:64px;height:64px;transform:rotate(-90deg);display:block}
+.ring circle{fill:none;stroke-width:5;stroke-linecap:round}
+.ring .bg{stroke:var(--line)}
+.ring .fg{transition:stroke-dashoffset .55s cubic-bezier(.4,0,.2,1)}
+.ring .num{position:absolute;inset:0;display:grid;place-items:center;font-size:15px;font-weight:680;letter-spacing:-.4px;font-variant-numeric:tabular-nums}
+.ring .num small{font-size:9px;font-weight:500;color:var(--sub);margin-left:.5px}
+
+/* ---------- section ---------- */
+.sec-title{font-size:12px;font-weight:600;color:var(--sub);letter-spacing:.5px;margin:18px 4px 9px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--line)}
+
+/* ---------- card ---------- */
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  padding:14px 14px 12px;margin-bottom:11px;box-shadow:var(--sh);
+}
+.card.late{border-color:rgba(255,107,107,.36)}
+.card.done{opacity:.72}
+
+.ac-top{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.ac-time{
+  font-size:11.5px;font-weight:650;color:var(--accent);
+  font-variant-numeric:tabular-nums;background:rgba(92,184,255,.12);
+  padding:2.5px 9px;border-radius:99px;letter-spacing:.2px;
+}
+[data-theme="light"] .ac-time{background:rgba(61,139,253,.1)}
+.ac-dur{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.ac-sp{flex:1}
+.ac-badge{font-size:10.5px;font-weight:650;padding:2.5px 8px;border-radius:99px;letter-spacing:.2px}
+.b-late{background:rgba(255,107,107,.15);color:var(--danger)}
+.b-soon{background:rgba(255,181,74,.15);color:var(--warn)}
+.b-done{background:rgba(63,214,160,.15);color:var(--ok)}
+
+.ac-check{
+  width:27px;height:27px;border-radius:50%;border:2px solid var(--line);
+  background:none;display:grid;place-items:center;cursor:pointer;flex:none;
+  color:transparent;font-size:13px;font-family:inherit;
+  transition:background .16s,border-color .16s,transform .1s;
+}
+.ac-check:active{transform:scale(.9)}
+.ac-check.on{background:var(--ok);border-color:var(--ok);color:#04150e}
+.ac-check.on::after{content:'✓';font-weight:700}
+
+.ac-title{font-size:16px;font-weight:620;line-height:1.36;letter-spacing:-.2px;margin:0 0 3px;word-break:break-word}
+.ac-note{font-size:12.5px;color:var(--sub);margin:2px 0 6px;white-space:pre-wrap;word-break:break-word;line-height:1.5}
+
+.bar{height:5px;border-radius:99px;background:var(--card2);overflow:hidden;margin:10px 0 9px}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .45s cubic-bezier(.4,0,.2,1)}
+.bar.full i{background:linear-gradient(90deg,var(--ok),#7ee0bf)}
+
+.steps{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-direction:column;gap:1px}
+.step{
+  display:flex;align-items:flex-start;gap:9px;padding:7px 8px;border-radius:11px;
+  cursor:pointer;transition:background .15s;font-size:13.5px;line-height:1.45;
+}
+.step:active{background:var(--card2)}
+.step .chk{
+  width:19px;height:19px;flex:none;border-radius:6px;border:1.7px solid var(--faint);
+  display:grid;place-items:center;font-size:11px;color:transparent;margin-top:1px;
+  transition:background .16s,border-color .16s;font-weight:700;
+}
+.step.on .chk{background:var(--ok);border-color:var(--ok);color:#04150e}
+.step .st{flex:1;word-break:break-word;transition:color .16s}
+.step.on .st{color:var(--faint);text-decoration:line-through;text-decoration-thickness:1px}
+
+.ac-foot{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--faint);margin-top:10px;font-variant-numeric:tabular-nums}
+.ac-foot .sp{flex:1}
+.ac-foot .lk{color:var(--accent);cursor:pointer;font-weight:600}
+
+/* ---------- empty ---------- */
+.empty{text-align:center;padding:40px 20px 44px;color:var(--sub)}
+.empty .ico{font-size:42px;margin-bottom:14px;filter:grayscale(0);opacity:.95}
+.empty h3{font-size:15px;margin:0 0 7px;color:var(--text);font-weight:620}
+.empty p{font-size:12.5px;margin:0;line-height:1.75}
+
+/* ---------- calendar ---------- */
+.cal{margin-top:2px}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 2px}
+.cal-title{font-size:16.5px;font-weight:650;letter-spacing:-.3px}
+.cal-nav{display:flex;gap:6px}
+.cal-nav button{
+  width:34px;height:34px;border-radius:11px;border:1px solid var(--line);
+  background:var(--card);color:var(--text);font-size:15px;cursor:pointer;
+  display:grid;place-items:center;font-family:inherit;transition:background .15s;
+}
+.cal-nav button:active{background:var(--card2)}
+.wd{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:5px}
+.wd span{text-align:center;font-size:10.5px;color:var(--faint);padding:3px 0;letter-spacing:.3px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cell{
+  position:relative;aspect-ratio:1/1;border:0;background:none;border-radius:12px;
+  color:var(--text);font-size:13.5px;font-family:inherit;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  transition:background .15s,transform .1s;font-variant-numeric:tabular-nums;padding:0;
+}
+.cell:active{transform:scale(.94)}
+.cell.out{color:var(--faint);opacity:.38}
+.cell.today{background:var(--card2);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.cell.sel{background:linear-gradient(145deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 6px 16px rgba(92,184,255,.32)}
+.cell .dots{display:flex;gap:2.5px;height:4px;align-items:center}
+.cell .dots i{width:4px;height:4px;border-radius:50%;background:var(--accent);display:block}
+.cell .dots i.ok{background:var(--ok)}
+.cell.sel .dots i,.cell.sel .dots i.ok{background:#fff}
+
+/* ---------- rows ---------- */
+.row{
+  display:flex;align-items:center;gap:12px;padding:13px 14px;
+  background:var(--card);border:1px solid var(--line);border-radius:15px;
+  margin-bottom:9px;cursor:pointer;transition:background .15s;
+}
+.row:active{background:var(--card2)}
+.row.dim{opacity:.55}
+.row .rg{flex:1;min-width:0}
+.row .rt{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.1px}
+.row .rs{font-size:11.5px;color:var(--sub);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .chip{font-size:10.5px;color:var(--faint);background:var(--card2);padding:3px 9px;border-radius:99px;flex:none;font-variant-numeric:tabular-nums}
+.row .chip.hot{color:var(--accent);background:rgba(92,184,255,.12)}
+
+/* ---------- sheet ---------- */
+.sheet-wrap{position:fixed;inset:0;z-index:60;visibility:hidden;transition:visibility 0s linear .32s}
+.sheet-wrap.show{visibility:visible;transition-delay:0s}
+.sheet-mask{position:absolute;inset:0;background:rgba(0,0,0,.52);opacity:0;transition:opacity .26s}
+.sheet-wrap.show .sheet-mask{opacity:1}
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;
+  max-height:92vh;max-height:92dvh;display:flex;flex-direction:column;
+  background:var(--card);border-radius:24px 24px 0 0;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 -18px 50px rgba(0,0,0,.42);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.sheet-wrap.show .sheet{transform:translateY(0)}
+.sheet-handle{width:38px;height:4px;border-radius:99px;background:var(--line);margin:9px auto 2px;flex:none}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex:none}
+.sheet-head h2{font-size:17px;font-weight:650;margin:0;letter-spacing:-.3px}
+.sheet-body{overflow-y:auto;padding:10px 18px 22px;flex:1;-webkit-overflow-scrolling:touch}
+.sheet-body::-webkit-scrollbar{width:0}
+
+/* ---------- form ---------- */
+.field{margin-bottom:15px}
+.label{font-size:11.5px;color:var(--sub);font-weight:600;margin-bottom:7px;display:block;letter-spacing:.25px}
+.label em{font-style:normal;color:var(--danger);margin-left:2px}
+.inp{
+  width:100%;border:1px solid var(--line);background:var(--card2);color:var(--text);
+  border-radius:12px;padding:11px 13px;font-family:inherit;font-size:16px;outline:none;
+  transition:border-color .16s,box-shadow .16s;appearance:none;
+}
+.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(92,184,255,.14)}
+textarea.inp{resize:vertical;min-height:58px;line-height:1.5;font-size:15px}
+select.inp{background-image:none}
+input[type="date"].inp,input[type="time"].inp{min-height:44px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.hint{font-size:11px;color:var(--faint);margin-top:6px;line-height:1.55}
+
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;background:var(--card2);padding:3px;border-radius:12px}
+.seg button{
+  border:0;background:none;color:var(--sub);font-family:inherit;font-size:13px;
+  font-weight:600;padding:9px 2px;border-radius:9px;cursor:pointer;transition:.16s;
+}
+.seg button.on{background:var(--card);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.16)}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip-t{
+  border:1px solid var(--line);background:var(--card2);color:var(--sub);
+  font-family:inherit;font-size:13px;padding:8px 12px;border-radius:11px;
+  cursor:pointer;transition:.16s;font-variant-numeric:tabular-nums;
+}
+.chip-t.on{background:rgba(92,184,255,.17);border-color:rgba(92,184,255,.55);color:var(--accent);font-weight:650}
+[data-theme="light"] .chip-t.on{background:rgba(61,139,253,.13)}
+
+.md-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.md-grid button{
+  padding:9px 0;border:1px solid var(--line);background:var(--card2);color:var(--sub);
+  border-radius:10px;font-family:inherit;font-size:12.5px;cursor:pointer;
+  font-variant-numeric:tabular-nums;transition:.16s;
+}
+.md-grid button.on{background:rgba(92,184,255,.17);border-color:rgba(92,184,255,.55);color:var(--accent);font-weight:650}
+
+.step-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.step-row .n{width:18px;flex:none;font-size:11px;color:var(--faint);text-align:center;font-variant-numeric:tabular-nums}
+.step-row .sin{
+  flex:1;border:1px solid var(--line);background:var(--card2);color:var(--text);
+  border-radius:10px;padding:9px 11px;font-family:inherit;font-size:15px;outline:none;
+  transition:border-color .16s;min-width:0;
+}
+.step-row .sin:focus{border-color:var(--accent)}
+.step-row .del{
+  width:32px;height:32px;flex:none;border:1px solid var(--line);background:none;
+  color:var(--faint);border-radius:9px;cursor:pointer;font-size:16px;line-height:1;
+  font-family:inherit;transition:.15s;
+}
+.step-row .del:active{background:rgba(255,107,107,.13);color:var(--danger)}
+.dashed{
+  width:100%;border:1px dashed var(--line);background:none;color:var(--sub);
+  font-family:inherit;font-size:13px;padding:10px;border-radius:11px;cursor:pointer;transition:.15s;
+}
+.dashed:active{background:var(--card2)}
+
+.btn{
+  border:0;font-family:inherit;font-size:14.5px;font-weight:650;padding:13px;
+  border-radius:13px;cursor:pointer;transition:.16s;letter-spacing:.2px;
+}
+.btn:active{transform:scale(.985)}
+.btn-primary{background:linear-gradient(145deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 8px 20px rgba(92,184,255,.3)}
+.btn-ghost{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+.btn-danger{background:rgba(255,107,107,.12);color:var(--danger);border:1px solid rgba(255,107,107,.26)}
+.btn-block{width:100%}
+.btn:disabled{opacity:.45;pointer-events:none}
+
+/* ---------- settings ---------- */
+.set-item{
+  display:flex;align-items:center;gap:12px;padding:14px;
+  background:var(--card);border:1px solid var(--line);border-radius:15px;margin-bottom:9px;
+}
+.set-item .ic{width:34px;height:34px;border-radius:11px;background:var(--card2);display:grid;place-items:center;font-size:16px;flex:none}
+.set-item .gt{flex:1;min-width:0}
+.set-item .gt h4{margin:0;font-size:14px;font-weight:600;letter-spacing:-.1px}
+.set-item .gt p{margin:3px 0 0;font-size:11.5px;color:var(--sub);line-height:1.5}
+.switch{width:46px;height:27px;border-radius:99px;background:var(--card2);border:1px solid var(--line);position:relative;cursor:pointer;flex:none;transition:.2s;padding:0}
+.switch::after{
+  content:'';position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;
+  background:var(--faint);transition:.2s;
+}
+.switch.on{background:rgba(92,184,255,.9);border-color:transparent}
+.switch.on::after{left:21px;background:#fff}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:4px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:13px 10px;text-align:center}
+.stat b{display:block;font-size:19px;font-weight:680;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.stat span{font-size:10.5px;color:var(--sub)}
+
+/* ---------- toast ---------- */
+.toasts{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(96px + env(safe-area-inset-bottom));z-index:100;
+  display:flex;flex-direction:column;gap:8px;align-items:center;
+  pointer-events:none;width:max-content;max-width:calc(100vw - 40px);
+}
+.toast{
+  background:rgba(30,39,52,.97);color:#eef4fb;font-size:13px;padding:10px 17px;
+  border-radius:99px;box-shadow:0 8px 26px rgba(0,0,0,.36);opacity:0;
+  transform:translateY(10px);transition:.26s cubic-bezier(.2,.7,.3,1);
+  max-width:100%;text-align:center;line-height:1.45;
+}
+[data-theme="light"] .toast{background:rgba(22,30,42,.95);color:#fff}
+.toast.in{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="view" id="view">
+    <div class="empty" style="padding-top:80px">
+      <div class="ico">🐟</div>
+      <h3>正在打开…</h3>
+      <p>如果一直停在这里，说明这个浏览器没跑起来脚本<br>换 Chrome / Edge / 夸克 试试</p>
+    </div>
+  </main>
+  <nav class="tabbar" id="tabbar">
+    <button class="tab on" data-act="tab" data-tab="today">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M8.4 12.3l2.4 2.4 4.8-5.2"/></svg>
+      <span>今日</span>
+    </button>
+    <button class="tab" data-act="tab" data-tab="calendar">
+      <svg viewBox="0 0 24 24"><rect x="3.4" y="5.2" width="17.2" height="15" rx="3.2"/><path d="M3.4 10.2h17.2M8 2.9v4M16 2.9v4"/></svg>
+      <span>日历</span>
+    </button>
+    <button class="tab" data-act="tab" data-tab="tasks">
+      <svg viewBox="0 0 24 24"><path d="M4 6.6h9M4 12h9M4 17.4h6"/><circle cx="18.3" cy="6.6" r="1.25" fill="currentColor" stroke="none"/><circle cx="18.3" cy="12" r="1.25" fill="currentColor" stroke="none"/></svg>
+      <span>任务</span>
+    </button>
+    <button class="tab" data-act="tab" data-tab="settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.15"/><path d="M12 3.7v2.1M12 18.2v2.1M3.7 12h2.1M18.2 12h2.1M6.3 6.3l1.5 1.5M16.2 16.2l1.5 1.5M17.7 6.3l-1.5 1.5M7.8 16.2l-1.5 1.5"/></svg>
+      <span>设置</span>
+    </button>
+  </nav>
+</div>
+<button class="fab" id="fab" data-act="new" aria-label="新建任务">+</button>
+<div class="sheet-wrap" id="sheetWrap">
+  <div class="sheet-mask" data-act="closeSheet"></div>
+  <section class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head" id="sheetHead"></div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </section>
+</div>
+<div class="toasts" id="toasts"></div>
+<noscript>
+  <div style="position:fixed;inset:0;display:grid;place-items:center;padding:30px;text-align:center;background:#0b1017;color:#e8eef7;font-family:sans-serif;z-index:999">
+    <div><div style="font-size:40px;margin-bottom:14px">🐟</div>
+    <h3 style="margin:0 0 8px">需要打开 JavaScript</h3>
+    <p style="font-size:13px;color:#8c9bab;margin:0">在浏览器设置里允许运行脚本，再刷新一次。</p></div>
+  </div>
+</noscript>
+<script>
+(function () {
+'use strict';
+
+/* =========================================================
+   0. 小工具
+   ========================================================= */
+var KEY = 'fish-todo.v1';
+var $ = function (s, r) { return (r || document).querySelector(s); };
+var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function ymd(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function parseYmd(s) {
+  var p = String(s || '').split('-');
+  return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]), 0, 0, 0, 0);
+}
+function todayStr() { return ymd(new Date()); }
+function startOfDay(d) { var x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function dayDiff(a, b) { return Math.round((startOfDay(a) - startOfDay(b)) / 86400000); }
+function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+var WEEK_CN = ['日', '一', '二', '三', '四', '五', '六'];
+
+/* =========================================================
+   1. 状态与存储
+   ========================================================= */
+var DB = null;
+
+var UI = {
+  tab: 'today',
+  calY: 0,
+  calM: 0,
+  selDate: null,
+  scroll: { today: 0, calendar: 0, tasks: 0, settings: 0 },
+  editing: null,
+  draft: null,
+  tickHandle: null
+};
+
+function blankDB() {
+  return {
+    v: 1, tasks: [], instances: {}, reminded: {},
+    settings: { theme: 'auto', notify: true, sound: true, browserNotify: false }
+  };
+}
+
+function loadDB() {
+  var d = null;
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (raw) d = JSON.parse(raw);
+  } catch (e) { d = null; }
+  if (!d || typeof d !== 'object') d = blankDB();
+
+  d.v = 1;
+  if (!Array.isArray(d.tasks)) d.tasks = [];
+  if (!d.instances || typeof d.instances !== 'object') d.instances = {};
+  if (!d.reminded || typeof d.reminded !== 'object') d.reminded = {};
+  var s = d.settings && typeof d.settings === 'object' ? d.settings : {};
+  d.settings = {
+    theme: ['auto', 'light', 'dark'].indexOf(s.theme) >= 0 ? s.theme : 'auto',
+    notify: s.notify !== false,
+    sound: s.sound !== false,
+    browserNotify: !!s.browserNotify
+  };
+  // 每个任务补全字段，防止旧数据 / 坏文件缺项
+  d.tasks = d.tasks.filter(function (t) { return t && typeof t === 'object'; });
+  d.tasks.forEach(function (t) {
+    if (!t.id) t.id = uid();
+    if (!Array.isArray(t.steps)) t.steps = [];
+    t.steps = t.steps.filter(function (s) { return s && typeof s === 'object'; });
+    t.steps.forEach(function (s) {
+      if (!s.id) s.id = uid();
+      if (typeof s.text !== 'string') s.text = String(s.text == null ? '' : s.text);
+    });
+    if (!Array.isArray(t.weekdays)) t.weekdays = [];
+    if (!Array.isArray(t.monthDays)) t.monthDays = [];
+    if (!t.kind) t.kind = 'recurring';
+    if (!t.repeat) t.repeat = 'daily';
+    if (!t.time) t.time = '09:00';
+    if (typeof t.duration !== 'number') t.duration = 30;
+    if (typeof t.remindBefore !== 'number') t.remindBefore = 10;
+    if (typeof t.dueWarn !== 'number') t.dueWarn = 10;
+  });
+  return d;
+}
+
+var saveTimer = null;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(function () {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(DB));
+    } catch (e) {
+      toast('保存失败，手机存储可能满了');
+    }
+  }, 100);
+}
+function saveNow() {
+  clearTimeout(saveTimer);
+  try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { }
+}
+
+/* =========================================================
+   2. 任务与实例
+   ========================================================= */
+function getTask(id) {
+  for (var i = 0; i < DB.tasks.length; i++) if (DB.tasks[i].id === id) return DB.tasks[i];
+  return null;
+}
+
+function readInst(key) {
+  var v = DB.instances[key];
+  return {
+    done: v && Array.isArray(v.done) ? v.done.slice() : [],
+    completedAt: v && v.completedAt ? v.completedAt : null
+  };
+}
+
+function writeInst(key, inst) {
+  if (inst.done.length === 0 && !inst.completedAt) delete DB.instances[key];
+  else DB.instances[key] = inst;
+  save();
+}
+
+function percentOf(task, inst) {
+  var steps = task.steps || [];
+  if (!steps.length) return inst.completedAt ? 100 : 0;
+  var set = {};
+  inst.done.forEach(function (id) { set[id] = 1; });
+  var n = 0;
+  steps.forEach(function (s) { if (set[s.id]) n++; });
+  return Math.round(n / steps.length * 100);
+}
+
+function occursOn(task, dateStr) {
+  if (!task || task.archived) return false;
+  if (task.kind === 'once') return task.date === dateStr;
+
+  var d = parseYmd(dateStr);
+  if (task.startDate && dateStr < task.startDate) return false;
+  if (task.endDate && dateStr > task.endDate) return false;
+
+  if (task.repeat === 'daily') {
+    var every = Math.max(1, Number(task.every) || 1);
+    var base = task.startDate ? parseYmd(task.startDate) : d;
+    var diff = dayDiff(d, base);
+    return diff >= 0 && diff % every === 0;
+  }
+  if (task.repeat === 'weekly') {
+    return (task.weekdays || []).indexOf(d.getDay()) >= 0;
+  }
+  if (task.repeat === 'monthly') {
+    var dom = d.getDate();
+    var last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return (task.monthDays || []).some(function (x) {
+      return x === 'last' ? dom === last : Number(x) === dom;
+    });
+  }
+  return false;
+}
+
+function actsForDate(dateStr) {
+  var base = parseYmd(dateStr);
+  var out = [];
+  DB.tasks.forEach(function (t) {
+    if (!occursOn(t, dateStr)) return;
+    var hm = String(t.time || '09:00').split(':');
+    var hh = Number(hm[0]) || 0, mm = Number(hm[1]) || 0;
+    var start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), hh, mm, 0, 0);
+    var dur = Math.max(0, Number(t.duration) || 0);
+    var end = new Date(start.getTime() + dur * 60000);
+    var key = t.id + '|' + dateStr;
+    var inst = readInst(key);
+    out.push({
+      task: t, dateStr: dateStr, key: key, start: start, end: end,
+      inst: inst, percent: percentOf(t, inst)
+    });
+  });
+  out.sort(function (a, b) {
+    return (a.start - b.start) || String(a.task.title).localeCompare(String(b.task.title));
+  });
+  return out;
+}
+
+/* 一个任务的「规则」文字 */
+function ruleText(t) {
+  var time = t.time || '09:00';
+  if (t.kind === 'once') return (t.date || '') + ' ' + time + ' · 临时';
+  if (t.repeat === 'daily') {
+    var e = Number(t.every) || 1;
+    return (e > 1 ? '每 ' + e + ' 天' : '每天') + ' ' + time;
+  }
+  if (t.repeat === 'weekly') {
+    var ws = (t.weekdays || []).slice().sort(function (a, b) { return a - b; });
+    return (ws.length ? ws.map(function (w) { return '周' + WEEK_CN[w]; }).join('、') : '未选') + ' ' + time;
+  }
+  if (t.repeat === 'monthly') {
+    var ds = (t.monthDays || []).slice().sort(function (a, b) {
+      if (a === 'last') return 1; if (b === 'last') return -1; return a - b;
+    }).map(function (x) { return x === 'last' ? '月末' : x + '日'; });
+    return '每月 ' + (ds.length ? ds.join('、') : '未选') + ' ' + time;
+  }
+  return time;
+}
+
+/* =========================================================
+   3. 主题 / 提示
+   ========================================================= */
+var mql = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+
+function applyTheme() {
+  var t = DB.settings.theme;
+  var actual = t;
+  if (t === 'auto') actual = (mql && mql.matches) ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', actual);
+  var mc = $('#themeColor');
+  if (mc) mc.setAttribute('content', actual === 'light' ? '#f2f5fa' : '#0b1017');
+}
+
+function toast(msg, ms) {
+  var w = $('#toasts');
+  if (!w) return;
+  var el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  w.appendChild(el);
+  requestAnimationFrame(function () { el.classList.add('in'); });
+  setTimeout(function () {
+    el.classList.remove('in');
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 320);
+  }, ms || 2600);
+}
+
+var ac = null;
+function playBeep() {
+  if (!DB.settings.sound) return;
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    ac = ac || new Ctx();
+    if (ac.state === 'suspended') ac.resume();
+    var t0 = ac.currentTime;
+    for (var i = 0; i < 2; i++) {
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(i === 0 ? 880 : 1180, t0 + i * 0.22);
+      g.gain.setValueAtTime(0.0001, t0 + i * 0.22);
+      g.gain.exponentialRampToValueAtTime(0.22, t0 + i * 0.22 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.22 + 0.19);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t0 + i * 0.22); o.stop(t0 + i * 0.22 + 0.2);
+    }
+  } catch (e) { }
+}
+
+function pushNotify(title, body) {
+  toast(title + ' · ' + body, 7000);
+  playBeep();
+  if (DB.settings.browserNotify && 'Notification' in window && Notification.permission === 'granted') {
+    try { new Notification(title, { body: body, tag: uid() }); } catch (e) { }
+  }
+}
+
+/* =========================================================
+   4. 视图渲染
+   ========================================================= */
+var viewEl = null;
+
+function render(noScrollReset) {
+  applyTheme();
+  viewEl = viewEl || $('#view');
+  var keep = noScrollReset ? (UI.scroll[UI.tab] || 0) : 0;
+  var html = '';
+
+  try {
+    if (UI.tab === 'today') html = viewToday();
+    else if (UI.tab === 'calendar') html = viewCalendar();
+    else if (UI.tab === 'tasks') html = viewTasks();
+    else html = viewSettings();
+  } catch (err) {
+    html = '<div class="empty"><div class="ico">😵</div><h3>这个页面出错了</h3>'
+      + '<p style="color:var(--danger)">' + esc(String((err && err.message) || err)) + '</p></div>';
+  }
+
+  viewEl.innerHTML = html;
+  viewEl.scrollTop = keep;
+  UI.scroll[UI.tab] = keep;
+
+  syncTabs();
+  syncFab();
+}
+
+function syncTabs() {
+  $$('#tabbar .tab').forEach(function (b) {
+    b.classList.toggle('on', b.getAttribute('data-tab') === UI.tab);
+  });
+}
+
+function syncFab() {
+  var fab = $('#fab');
+  if (!fab) return;
+  var show = UI.tab !== 'settings';
+  fab.classList.toggle('hide', !show);
+}
+
+function ringHTML(pct) {
+  pct = clamp(Math.round(pct), 0, 100);
+  var C = 2 * Math.PI * 18;
+  var off = C * (1 - pct / 100);
+  return '<div class="ring">'
+    + '<svg viewBox="0 0 44 44">'
+    + '<circle class="bg" cx="22" cy="22" r="18"/>'
+    + '<circle class="fg" cx="22" cy="22" r="18" style="stroke:var(--accent)"'
+    + ' stroke-dasharray="' + C.toFixed(2) + '" stroke-dashoffset="' + off.toFixed(2) + '"/>'
+    + '</svg>'
+    + '<div class="num">' + pct + '<small>%</small></div>'
+    + '</div>';
+}
+
+function activityCard(a, nowMs) {
+  var t = a.task;
+  var pct = a.percent;
+  var steps = t.steps || [];
+  var startMs = a.start.getTime(), endMs = a.end.getTime();
+  var isToday = a.dateStr === todayStr();
+  var late = isToday && nowMs > endMs && pct < 100;
+  var remainMin = Math.round((endMs - nowMs) / 60000);
+  var soon = isToday && !late && pct < 100 && remainMin >= 0 && remainMin <= 30;
+
+  var hm = function (d) { return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+  var range = hm(a.start) + (t.duration > 0 ? ' – ' + hm(a.end) : '');
+
+  var badge = '';
+  if (pct >= 100) badge = '<span class="ac-badge b-done">完成</span>';
+  else if (late) badge = '<span class="ac-badge b-late">超时</span>';
+  else if (soon) badge = '<span class="ac-badge b-soon">剩 ' + remainMin + ' 分</span>';
+
+  var stepsHTML = '';
+  if (steps.length) {
+    var set = {};
+    a.inst.done.forEach(function (id) { set[id] = 1; });
+    stepsHTML = '<ul class="steps">' + steps.map(function (s) {
+      var on = !!set[s.id];
+      return '<li class="step' + (on ? ' on' : '') + '" data-act="step" data-id="' + esc(t.id)
+        + '" data-date="' + esc(a.dateStr) + '" data-step="' + esc(s.id) + '">'
+        + '<span class="chk">' + (on ? '✓' : '') + '</span>'
+        + '<span class="st">' + esc(s.text) + '</span></li>';
+    }).join('') + '</ul>';
+  }
+
+  var doneSteps = steps.filter(function (s) { return a.inst.done.indexOf(s.id) >= 0; }).length;
+  var footLeft = steps.length
+    ? doneSteps + '/' + steps.length + ' 步'
+    : (pct >= 100 ? '已完成' : '点右边圆圈完成');
+
+  return '<article class="card' + (late ? ' late' : '') + (pct >= 100 ? ' done' : '') + '">'
+    + '<div class="ac-top">'
+    + '<span class="ac-time">' + range + '</span>'
+    + '<span class="ac-sp"></span>'
+    + badge
+    + '<button class="ac-check' + (pct >= 100 ? ' on' : '') + '" data-act="done"'
+    + ' data-id="' + esc(t.id) + '" data-date="' + esc(a.dateStr) + '" aria-label="完成"></button>'
+    + '</div>'
+    + '<h3 class="ac-title">' + esc(t.title) + '</h3>'
+    + (t.note ? '<p class="ac-note">' + esc(t.note) + '</p>' : '')
+    + (steps.length ? '<div class="bar' + (pct >= 100 ? ' full' : '') + '"><i style="width:' + pct + '%"></i></div>' : '')
+    + stepsHTML
+    + '<div class="ac-foot"><span>' + footLeft + '</span><span class="sp"></span>'
+    + '<span class="lk" data-act="edit" data-id="' + esc(t.id) + '">编辑</span>'
+    + (steps.length ? '<span>·</span><span>' + pct + '%</span>' : '')
+    + '</div>'
+    + '</article>';
+}
+
+function viewToday() {
+  var ds = todayStr();
+  var now = new Date();
+  var nowMs = now.getTime();
+  var acts = actsForDate(ds);
+  var dObj = parseYmd(ds);
+
+  var totalSteps = 0, doneSteps = 0, doneActs = 0;
+  acts.forEach(function (a) {
+    var steps = a.task.steps || [];
+    if (a.percent >= 100) doneActs++;
+    if (steps.length) {
+      totalSteps += steps.length;
+      steps.forEach(function (s) { if (a.inst.done.indexOf(s.id) >= 0) doneSteps++; });
+    }
+  });
+
+  var overall;
+  if (totalSteps > 0) overall = Math.round(doneSteps / totalSteps * 100);
+  else overall = acts.length ? Math.round(doneActs / acts.length * 100) : 0;
+  // 还有事没做完时，环不给 100%，免得和「还剩 N 件」打架
+  if (acts.length && doneActs < acts.length) overall = Math.min(overall, 99);
+
+  var sub;
+  if (!acts.length) sub = '今天还没有安排，闲鱼一条～';
+  else if (doneActs === acts.length) sub = '今天 ' + acts.length + ' 件事，全部做完啦';
+  else sub = '今天 ' + acts.length + ' 件事 · 已完成 ' + doneActs + ' 件 · 还剩 ' + (acts.length - doneActs) + ' 件';
+
+  var head = '<div class="page-head"><div>'
+    + '<h1 class="page-title">' + (dObj.getMonth() + 1) + '月' + dObj.getDate() + '日'
+    + '<span>周' + WEEK_CN[dObj.getDay()] + '</span></h1>'
+    + '<div class="page-sub">' + sub + '</div>'
+    + '</div>'
+    + (acts.length ? ringHTML(overall) : '')
+    + '</div>';
+
+  if (!acts.length) {
+    return head + '<div class="empty"><div class="ico">🐟</div>'
+      + '<h3>今天空空的</h3>'
+      + '<p>点右下角的 <b>＋</b> 加一件事<br>可以设成每天 / 每周 / 每月自动重复<br>也可以建一条一次性的临时任务</p>'
+      + '</div>';
+  }
+
+  var list = acts.map(function (a) { return activityCard(a, nowMs); }).join('');
+
+  var tip = '<div class="card" style="display:flex;align-items:center;gap:11px;background:var(--card2);box-shadow:none">'
+    + '<span style="font-size:19px">📅</span>'
+    + '<div style="flex:1;font-size:12px;color:var(--sub);line-height:1.5">想让手机到点响铃、写进日历？<br>把提醒同步到系统日历就行</div>'
+    + '<button class="btn btn-primary" style="padding:9px 13px;font-size:12.5px;flex:none" data-act="calSync" data-days="7">同步</button>'
+    + '</div>';
+
+  return head + list + tip;
+}
+
+function daySummary(dateStr) {
+  var total = 0, done = 0;
+  for (var i = 0; i < DB.tasks.length; i++) {
+    var t = DB.tasks[i];
+    if (!occursOn(t, dateStr)) continue;
+    total++;
+    var inst = readInst(t.id + '|' + dateStr);
+    if (percentOf(t, inst) >= 100) done++;
+  }
+  return { total: total, done: done };
+}
+
+function viewCalendar() {
+  var y = UI.calY, m = UI.calM;
+  var tds = todayStr();
+  var sel = UI.selDate || tds;
+
+  var startWd = new Date(y, m, 1).getDay();
+  var daysInMonth = new Date(y, m + 1, 0).getDate();
+  var cells = [], i;
+
+  for (i = startWd - 1; i >= 0; i--) cells.push({ d: new Date(y, m, -i), out: true });
+  for (i = 1; i <= daysInMonth; i++) cells.push({ d: new Date(y, m, i), out: false });
+  var k = 1;
+  while (cells.length % 7 !== 0) cells.push({ d: new Date(y, m + 1, k++), out: true });
+
+  var cellsHTML = cells.map(function (c) {
+    var ds = ymd(c.d);
+    var isToday = ds === tds;
+    var isSel = ds === sel;
+    var sum = daySummary(ds);
+    var dots = '';
+    if (sum.total > 0) {
+      var n = Math.min(3, sum.total);
+      for (var j = 0; j < n; j++) {
+        dots += '<i' + (j < sum.done ? ' class="ok"' : '') + '></i>';
+      }
+    }
+    return '<button class="cell' + (c.out ? ' out' : '') + (isToday ? ' today' : '')
+      + (isSel ? ' sel' : '') + '" data-act="pickDate" data-date="' + ds + '">'
+      + '<span>' + c.d.getDate() + '</span>'
+      + '<span class="dots">' + dots + '</span></button>';
+  }).join('');
+
+  var head = '<div class="cal-head">'
+    + '<div class="cal-title">' + y + ' 年 ' + (m + 1) + ' 月</div>'
+    + '<div class="cal-nav">'
+    + '<button data-act="calPrev" aria-label="上个月">‹</button>'
+    + '<button data-act="calToday" aria-label="回到今天" style="width:auto;padding:0 11px;font-size:12px">今</button>'
+    + '<button data-act="calNext" aria-label="下个月">›</button>'
+    + '</div></div>';
+
+  var wdHTML = '<div class="wd">' + WEEK_CN.map(function (w) { return '<span>' + w + '</span>'; }).join('') + '</div>';
+
+  var selObj = parseYmd(sel);
+  var selActs = actsForDate(sel);
+  var nowMs = Date.now();
+  var listHTML = selActs.length
+    ? selActs.map(function (a) { return activityCard(a, nowMs); }).join('')
+    : '<div class="empty" style="padding:26px 20px"><div class="ico" style="font-size:32px">🌙</div>'
+    + '<p>这天没有安排</p></div>';
+
+  return '<div class="cal">' + head + wdHTML
+    + '<div class="cal-grid">' + cellsHTML + '</div></div>'
+    + '<div class="sec-title">' + (selObj.getMonth() + 1) + ' 月 ' + selObj.getDate() + ' 日 · 周'
+    + WEEK_CN[selObj.getDay()] + (sel === tds ? ' · 今天' : '') + '</div>'
+    + listHTML;
+}
+
+function viewTasks() {
+  var tds = todayStr();
+  var rec = [], once = [], past = [];
+  DB.tasks.forEach(function (t) {
+    if (t.archived) { past.push(t); return; }
+    if (t.kind === 'once') {
+      if ((t.date || '') >= tds) once.push(t); else past.push(t);
+    } else rec.push(t);
+  });
+  var byTime = function (a, b) { return String(a.time).localeCompare(String(b.time)); };
+  var byDate = function (a, b) {
+    return String(a.date || '').localeCompare(String(b.date || '')) || String(a.time).localeCompare(String(b.time));
+  };
+  rec.sort(byTime); once.sort(byDate); past.sort(byDate);
+
+  function rowHTML(t, dim) {
+    var n = (t.steps || []).length;
+    return '<div class="row' + (dim ? ' dim' : '') + '" data-act="edit" data-id="' + esc(t.id) + '">'
+      + '<div class="rg">'
+      + '<div class="rt">' + esc(t.title) + '</div>'
+      + '<div class="rs">' + esc(ruleText(t)) + '</div>'
+      + '</div>'
+      + '<div class="chip' + (n ? ' hot' : '') + '">' + (n ? n + ' 步' : '一步') + '</div>'
+      + '</div>';
+  }
+
+  var html = '<div class="page-head"><div>'
+    + '<h1 class="page-title">全部任务</h1>'
+    + '<div class="page-sub">例行 ' + rec.length + ' · 临时 ' + once.length + ' · 已结束 ' + past.length + '</div>'
+    + '</div></div>';
+
+  if (!DB.tasks.length) {
+    return html + '<div class="empty"><div class="ico">🐟</div><h3>还没有任务</h3>'
+      + '<p>点右下角 <b>＋</b> 建第一条吧</p></div>';
+  }
+
+  if (rec.length) html += '<div class="sec-title">每天 / 每周 / 每月</div>' + rec.map(function (t) { return rowHTML(t, false); }).join('');
+  if (once.length) html += '<div class="sec-title">临时任务</div>' + once.map(function (t) { return rowHTML(t, false); }).join('');
+  if (past.length) html += '<div class="sec-title">已结束</div>' + past.map(function (t) { return rowHTML(t, true); }).join('');
+
+  return html;
+}
+
+function viewSettings() {
+  var s = DB.settings;
+  var instCount = Object.keys(DB.instances).length;
+  var stepTotal = 0, stepDone = 0;
+  Object.keys(DB.instances).forEach(function (k) {
+    var t = getTask(k.split('|')[0]);
+    if (!t) return;
+    var steps = t.steps || [];
+    stepTotal += steps.length;
+    var inst = DB.instances[k];
+    if (!inst || !Array.isArray(inst.done)) return;
+    // 只统计还在的步骤，删过的旧 id 不算，不然会超过 100%
+    var alive = {};
+    steps.forEach(function (s) { alive[s.id] = 1; });
+    inst.done.forEach(function (id) { if (alive[id]) stepDone++; });
+  });
+  var rate = stepTotal ? Math.min(100, Math.round(stepDone / stepTotal * 100)) : 0;
+
+  var notifyState = s.notify ? '已开启' : '已关闭';
+
+  var html = '<div class="page-head"><div>'
+    + '<h1 class="page-title">设置</h1>'
+    + '<div class="page-sub">提醒、日历、备份都在这里</div>'
+    + '</div></div>';
+
+  html += '<div class="stat-row">'
+    + '<div class="stat"><b>' + DB.tasks.length + '</b><span>任务</span></div>'
+    + '<div class="stat"><b>' + instCount + '</b><span>打卡记录</span></div>'
+    + '<div class="stat"><b>' + rate + '%</b><span>总完成度</span></div>'
+    + '</div>';
+
+  html += '<div class="sec-title">提醒</div>'
+    + '<div class="set-item"><div class="ic">⏰</div><div class="gt"><h4>应用内提醒</h4>'
+    + '<p>' + (s.notify ? '快开始、快截止时会弹提示' : '已关闭，不会弹提示') + '</p></div>'
+    + '<button class="switch' + (s.notify ? ' on' : '') + '" data-act="toggle" data-key="notify" aria-label="开关"></button></div>'
+    + '<div class="set-item"><div class="ic">🔔</div><div class="gt"><h4>提示音</h4>'
+    + '<p>提醒时响一下（手机静音就没声）</p></div>'
+    + '<button class="switch' + (s.sound ? ' on' : '') + '" data-act="toggle" data-key="sound" aria-label="开关"></button></div>'
+    + '<div class="set-item"><div class="ic">📣</div><div class="gt"><h4>系统通知</h4>'
+    + '<p>仅页面开着时有效；真正靠得住的响铃请用下面的「同步到日历」</p></div>'
+    + '<button class="switch' + (s.browserNotify ? ' on' : '') + '" data-act="toggle" data-key="browserNotify" aria-label="开关"></button></div>';
+
+  html += '<div class="sec-title">和系统日历 / 闹铃连接</div>'
+    + '<div class="card" style="box-shadow:none;background:var(--card2)">'
+    + '<div style="font-size:12.5px;color:var(--sub);line-height:1.7;margin-bottom:12px">'
+    + '导出 .ics 文件，手机点开就能导入系统日历。<br>到点系统会自己响铃，比网页通知靠谱得多。'
+    + '</div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button class="btn btn-primary" style="flex:1;padding:11px;font-size:13px" data-act="calSync" data-days="7">未来 7 天</button>'
+    + '<button class="btn btn-ghost" style="flex:1;padding:11px;font-size:13px" data-act="calSync" data-days="30">未来 30 天</button>'
+    + '</div></div>';
+
+  html += '<div class="sec-title">外观</div>'
+    + '<div class="set-item" style="display:block">'
+    + '<div class="gt" style="margin-bottom:10px"><h4>主题</h4></div>'
+    + '<div class="seg" data-seg="theme">'
+    + '<button data-act="theme" data-v="auto" class="' + (s.theme === 'auto' ? 'on' : '') + '">跟随系统</button>'
+    + '<button data-act="theme" data-v="light" class="' + (s.theme === 'light' ? 'on' : '') + '">浅色</button>'
+    + '<button data-act="theme" data-v="dark" class="' + (s.theme === 'dark' ? 'on' : '') + '">深色</button>'
+    + '</div></div>';
+
+  html += '<div class="sec-title">数据</div>'
+    + '<div class="set-item" data-act="exportJSON" style="cursor:pointer"><div class="ic">📤</div>'
+    + '<div class="gt"><h4>备份数据</h4><p>导出一个 json 文件，换手机时能恢复</p></div>'
+    + '<span style="color:var(--faint);font-size:18px">›</span></div>'
+    + '<div class="set-item" data-act="importJSON" style="cursor:pointer"><div class="ic">📥</div>'
+    + '<div class="gt"><h4>恢复数据</h4><p>选一个之前备份的 json 文件</p></div>'
+    + '<span style="color:var(--faint);font-size:18px">›</span></div>'
+    + '<div class="set-item" data-act="wipe" style="cursor:pointer"><div class="ic">🗑️</div>'
+    + '<div class="gt"><h4>清空全部数据</h4><p>任务和打卡记录都会删掉</p></div>'
+    + '<span style="color:var(--faint);font-size:18px">›</span></div>';
+
+  html += '<div class="sec-title">关于</div>'
+    + '<div class="card" style="box-shadow:none;font-size:12px;color:var(--sub);line-height:1.8">'
+    + '鱼鱼清单 · 本地版<br>'
+    + '数据只存在这台手机的浏览器里，不上传任何服务器。<br>'
+    + '建议偶尔点上面「备份数据」存一份，换手机 / 清缓存不怕丢。'
+    + '</div>';
+
+  html += '<input type="file" id="importFile" accept=".json,application/json" style="display:none">';
+
+  return html;
+}
+
+/* =========================================================
+   5. 编辑弹窗
+   ========================================================= */
+function fld(label, inner, req) {
+  return '<div class="field"><label class="label">' + label + (req ? '<em>*</em>' : '') + '</label>' + inner + '</div>';
+}
+
+function stepRowsHTML() {
+  var steps = UI.draft.steps || [];
+  if (!steps.length) {
+    return '<div class="hint" style="margin-bottom:9px">还没分步骤。不填也能用，就是一件直接打勾的事。</div>';
+  }
+  return steps.map(function (s, i) {
+    return '<div class="step-row">'
+      + '<span class="n">' + (i + 1) + '</span>'
+      + '<input class="sin" data-stepid="' + esc(s.id) + '" value="' + esc(s.text || '') + '"'
+      + ' placeholder="第 ' + (i + 1) + ' 步做什么" autocomplete="off">'
+      + '<button class="del" data-act="delStep" data-stepid="' + esc(s.id) + '" aria-label="删除这步">×</button>'
+      + '</div>';
+  }).join('');
+}
+
+function repeatBoxHTML() {
+  var f = UI.draft;
+  var kind = f.kind === 'once' ? 'once' : (f.repeat || 'daily');
+
+  if (kind === 'daily') {
+    return '<div class="field"><label class="label">每几天做一次</label>'
+      + '<input type="number" class="inp" data-f="every" min="1" max="365" inputmode="numeric" value="'
+      + (Number(f.every) || 1) + '">'
+      + '<div class="hint">1 = 每天 &nbsp;·&nbsp; 2 = 隔一天 &nbsp;·&nbsp; 7 = 每周同一天</div></div>';
+  }
+
+  if (kind === 'weekly') {
+    var wd = (f.weekdays || []).map(Number);
+    var s = '<div class="field"><label class="label">每周哪几天</label><div class="chips">';
+    for (var i = 0; i < 7; i++) {
+      s += '<button class="chip-t' + (wd.indexOf(i) >= 0 ? ' on' : '') + '"'
+        + ' data-act="pickWeek" data-v="' + i + '">周' + WEEK_CN[i] + '</button>';
+    }
+    return s + '</div><div class="hint">可以选多个，比如周一到周五</div></div>';
+  }
+
+  if (kind === 'monthly') {
+    var md = (f.monthDays || []).map(function (x) { return x === 'last' ? 'last' : Number(x); });
+    var h = '<div class="field"><label class="label">每月哪几天</label><div class="md-grid">';
+    for (var d = 1; d <= 31; d++) {
+      h += '<button class="' + (md.indexOf(d) >= 0 ? 'on' : '') + '"'
+        + ' data-act="pickMonthDay" data-v="' + d + '">' + d + '</button>';
+    }
+    h += '<button class="' + (md.indexOf('last') >= 0 ? 'on' : '') + '"'
+      + ' data-act="pickMonthDay" data-v="last">末</button>';
+    return h + '</div><div class="hint">「末」= 每个月最后一天（29/30/31 号自动对上）</div></div>';
+  }
+
+  return '<div class="field"><label class="label">哪天做</label>'
+    + '<input type="date" class="inp" data-f="date" value="' + esc(f.date || todayStr()) + '">'
+    + '<div class="hint">一次性任务，做完就结束，不会重复</div></div>';
+}
+
+function renderSheet() {
+  var f = UI.draft;
+  var isNew = !UI.editing;
+  var kind = f.kind === 'once' ? 'once' : (f.repeat || 'daily');
+
+  $('#sheetHead').innerHTML = '<h2>' + (isNew ? '新建任务' : '编辑任务') + '</h2>'
+    + '<button data-act="closeSheet" aria-label="关闭" style="width:34px;height:34px;border-radius:50%;'
+    + 'border:1px solid var(--line);background:var(--card2);color:var(--sub);font-size:15px;cursor:pointer;'
+    + 'font-family:inherit;line-height:1">✕</button>';
+
+  var html = '';
+
+  html += fld('要做什么',
+    '<input class="inp" data-f="title" id="f-title" placeholder="比如：写周报" autocomplete="off" value="'
+    + esc(f.title || '') + '">', true);
+
+  html += fld('备注（选填）',
+    '<textarea class="inp" data-f="note" placeholder="补充点细节" rows="2">' + esc(f.note || '') + '</textarea>');
+
+  var segItems = [['daily', '每天'], ['weekly', '每周'], ['monthly', '每月'], ['once', '一次性']];
+  html += '<div class="field"><label class="label">什么时候</label><div class="seg">'
+    + segItems.map(function (it) {
+      return '<button data-act="pickKind" data-v="' + it[0] + '"'
+        + (kind === it[0] ? ' class="on"' : '') + '>' + it[1] + '</button>';
+    }).join('')
+    + '</div></div>';
+
+  html += '<div id="repeatBox">' + repeatBoxHTML() + '</div>';
+
+  html += '<div class="field"><div class="row2">'
+    + '<div><label class="label">几点开始</label>'
+    + '<input type="time" class="inp" data-f="time" value="' + esc(f.time || '09:00') + '"></div>'
+    + '<div><label class="label">大概做多久</label>'
+    + '<input type="number" class="inp" data-f="duration" min="0" max="1440" inputmode="numeric" value="'
+    + (f.duration === '' ? '' : (Number(f.duration) || 0)) + '">'
+    + '<div class="hint" style="margin-top:5px">分钟</div></div>'
+    + '</div></div>';
+
+  html += '<div class="field"><div class="row2">'
+    + '<div><label class="label">开始前提醒</label>'
+    + '<input type="number" class="inp" data-f="remindBefore" min="0" max="1440" inputmode="numeric" value="'
+    + (f.remindBefore === '' ? '' : (Number(f.remindBefore) || 0)) + '">'
+    + '<div class="hint" style="margin-top:5px">分钟，0 = 不提醒</div></div>'
+    + '<div><label class="label">快截止时再提醒</label>'
+    + '<input type="number" class="inp" data-f="dueWarn" min="0" max="1440" inputmode="numeric" value="'
+    + (f.dueWarn === '' ? '' : (Number(f.dueWarn) || 0)) + '">'
+    + '<div class="hint" style="margin-top:5px">分钟，没做完才响</div></div>'
+    + '</div></div>';
+
+  html += '<div class="field"><label class="label">分成几步完成</label>'
+    + '<div id="stepEdit">' + stepRowsHTML() + '</div>'
+    + '<button class="dashed" style="margin-top:2px" data-act="addStep">＋ 添加一步</button>'
+    + '<div class="hint">每勾一步就涨进度；全部勾完就是 100%</div></div>';
+
+  html += '<div style="display:flex;gap:9px;margin-top:20px">'
+    + (isNew ? '' : '<button class="btn btn-danger" style="flex:none;padding:13px 20px" data-act="deleteTask">删除</button>')
+    + '<button class="btn btn-primary" style="flex:1" data-act="saveTask">保存</button>'
+    + '</div>';
+
+  $('#sheetBody').innerHTML = html;
+}
+
+function openEditor(id) {
+  if (id) {
+    var t = getTask(id);
+    if (!t) return;
+    UI.editing = id;
+    UI.draft = JSON.parse(JSON.stringify(t));
+    if (!Array.isArray(UI.draft.steps)) UI.draft.steps = [];
+    UI.draft.weekdays = (UI.draft.weekdays || []).map(Number);
+    UI.draft.monthDays = (UI.draft.monthDays || []).map(function (x) {
+      return x === 'last' ? 'last' : Number(x);
+    });
+    if (UI.draft.kind !== 'once') UI.draft.kind = 'recurring';
+  } else {
+    var now = new Date();
+    var hh = now.getHours(), mm = Math.ceil(now.getMinutes() / 10) * 10;
+    if (mm >= 60) { hh = (hh + 1) % 24; mm = 0; }
+    UI.editing = null;
+    UI.draft = {
+      id: uid(), title: '', note: '',
+      kind: 'recurring', repeat: 'daily', every: 1,
+      weekdays: [now.getDay()], monthDays: [],
+      startDate: todayStr(), endDate: null, date: todayStr(),
+      time: pad2(hh) + ':' + pad2(mm),
+      duration: 30, remindBefore: 10, dueWarn: 10,
+      steps: [], archived: false, createdAt: Date.now()
+    };
+  }
+  renderSheet();
+  $('#sheetWrap').classList.add('show');
+}
+
+function closeSheet() {
+  $('#sheetWrap').classList.remove('show');
+  UI.editing = null;
+  UI.draft = null;
+}
+
+function syncFromDom() {
+  if (!UI.draft) return;
+  var body = $('#sheetBody');
+  if (!body) return;
+  $$('[data-f]', body).forEach(function (el) {
+    var k = el.getAttribute('data-f');
+    if (el.type === 'number') UI.draft[k] = el.value === '' ? '' : Number(el.value);
+    else UI.draft[k] = el.value;
+  });
+  $$('[data-stepid]', body).forEach(function (el) {
+    if (!el.classList || !el.classList.contains('sin')) return;
+    var sid = el.getAttribute('data-stepid');
+    (UI.draft.steps || []).forEach(function (s) { if (s.id === sid) s.text = el.value; });
+  });
+}
+
+function saveTask() {
+  syncFromDom();
+  var f = UI.draft;
+  if (!f) return;
+  var title = String(f.title || '').trim();
+  if (!title) {
+    toast('先给这件事起个名字吧');
+    var ti = $('[data-f="title"]');
+    if (ti) ti.focus();
+    return;
+  }
+
+  var kind = f.kind === 'once' ? 'once' : 'recurring';
+  var t = {
+    id: f.id,
+    title: title,
+    note: String(f.note || '').trim(),
+    kind: kind,
+    repeat: f.repeat || 'daily',
+    every: clamp(Number(f.every) || 1, 1, 365),
+    weekdays: (f.weekdays || []).map(Number).filter(function (x) { return x >= 0 && x < 7; }),
+    monthDays: (f.monthDays || []).map(function (x) { return x === 'last' ? 'last' : Number(x); })
+      .filter(function (x) { return x === 'last' || (x >= 1 && x <= 31); }),
+    startDate: f.startDate || todayStr(),
+    endDate: null,
+    date: f.date || todayStr(),
+    time: String(f.time || '09:00').slice(0, 5),
+    duration: clamp(Number(f.duration) || 0, 0, 1440),
+    remindBefore: clamp(Number(f.remindBefore) || 0, 0, 1440),
+    dueWarn: clamp(Number(f.dueWarn) || 0, 0, 1440),
+    steps: (f.steps || []).filter(function (s) { return String(s.text || '').trim(); })
+      .map(function (s) { return { id: s.id || uid(), text: String(s.text).trim() }; }),
+    archived: !!f.archived,
+    createdAt: f.createdAt || Date.now()
+  };
+
+  if (kind === 'recurring') {
+    if (t.repeat === 'weekly' && !t.weekdays.length) { toast('选一下每周哪几天'); return; }
+    if (t.repeat === 'monthly' && !t.monthDays.length) { toast('选一下每月哪几天'); return; }
+    if (t.repeat === 'daily' && !/^\d{4}-\d{2}-\d{2}$/.test(t.startDate)) t.startDate = todayStr();
+  } else {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(t.date)) { toast('选一下是哪天'); return; }
+  }
+
+  var idx = -1;
+  for (var k = 0; k < DB.tasks.length; k++) if (DB.tasks[k].id === t.id) { idx = k; break; }
+  if (idx >= 0) DB.tasks[idx] = t; else DB.tasks.push(t);
+
+  saveNow();
+  closeSheet();
+  render(true);
+
+  if (idx >= 0) {
+    toast('改好了');
+  } else if (occursOn(t, todayStr())) {
+    toast('加上了，就在今天');
+  } else {
+    toast('加上了 · 今天不会出现，去「日历」里能看到它', 4000);
+  }
+}
+
+function deleteTask() {
+  var id = UI.editing;
+  if (!id) return;
+  var t = getTask(id);
+  if (!confirm('删掉「' + (t ? t.title : '') + '」吗？打卡记录也会一起删。')) return;
+  DB.tasks = DB.tasks.filter(function (x) { return x.id !== id; });
+  Object.keys(DB.instances).forEach(function (k) {
+    if (k.indexOf(id + '|') === 0) delete DB.instances[k];
+  });
+  saveNow();
+  closeSheet();
+  render();
+  toast('删掉了');
+}
+
+/* =========================================================
+   6. 打卡
+   ========================================================= */
+function toggleStep(taskId, dateStr, stepId) {
+  var t = getTask(taskId);
+  if (!t) return;
+  var key = taskId + '|' + dateStr;
+  var inst = readInst(key);
+  var i = inst.done.indexOf(stepId);
+  if (i >= 0) inst.done.splice(i, 1); else inst.done.push(stepId);
+  var steps = t.steps || [];
+  var all = steps.length > 0 && steps.every(function (s) { return inst.done.indexOf(s.id) >= 0; });
+  inst.completedAt = all ? (inst.completedAt || Date.now()) : null;
+  writeInst(key, inst);
+}
+
+function toggleAll(taskId, dateStr) {
+  var t = getTask(taskId);
+  if (!t) return;
+  var key = taskId + '|' + dateStr;
+  var inst = readInst(key);
+  var steps = t.steps || [];
+  if (!steps.length) {
+    inst.completedAt = inst.completedAt ? null : Date.now();
+  } else {
+    var all = steps.every(function (s) { return inst.done.indexOf(s.id) >= 0; });
+    inst.done = all ? [] : steps.map(function (s) { return s.id; });
+    inst.completedAt = all ? null : Date.now();
+  }
+  writeInst(key, inst);
+}
+
+/* =========================================================
+   7. 提醒引擎
+   ========================================================= */
+function fire(a, type, msg) {
+  var k = a.key + '|' + type;
+  if (DB.reminded[k]) return;
+  var n = Object.keys(DB.reminded).length;
+  if (n > 300) DB.reminded = {};
+  DB.reminded[k] = Date.now();
+  save();
+  var titles = { pre: '⏰ 要开始啦', due: '⚠️ 快到截止了', over: '⌛ 已经到点了' };
+  pushNotify(titles[type] || '提醒', a.task.title + ' · ' + msg);
+}
+
+function reminderTick() {
+  if (!DB || !DB.settings.notify) return;
+  var now = Date.now();
+  // 昨天也要扫：跨零点的任务，实例 key 挂在前一天
+  var dates = [ymd(addDays(new Date(), -1)), todayStr(), ymd(addDays(new Date(), 1))];
+  dates.forEach(function (ds) {
+    actsForDate(ds).forEach(function (a) {
+      var st = a.start.getTime(), en = a.end.getTime();
+      var rb = Math.max(0, Number(a.task.remindBefore) || 0);
+      var dw = Math.max(0, Number(a.task.dueWarn) || 0);
+
+      if (rb > 0 && now >= st - rb * 60000 && now < st) {
+        fire(a, 'pre', '还有 ' + Math.max(1, Math.round((st - now) / 60000)) + ' 分钟开始');
+      }
+      if (dw > 0 && now >= en - dw * 60000 && now < en && a.percent < 100) {
+        fire(a, 'due', '还有 ' + Math.max(1, Math.round((en - now) / 60000))
+          + ' 分钟截止，现在才 ' + a.percent + '%');
+      }
+      if (now >= en && now < en + 5 * 60000 && a.percent < 100) {
+        fire(a, 'over', '时间到了还没做完哦');
+      }
+    });
+  });
+}
+
+/* =========================================================
+   8. 系统日历 / 闹铃对接
+   ========================================================= */
+function icsEsc(s) {
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
+}
+
+function utcStamp(d) {
+  return d.getUTCFullYear() + pad2(d.getUTCMonth() + 1) + pad2(d.getUTCDate()) + 'T'
+    + pad2(d.getUTCHours()) + pad2(d.getUTCMinutes()) + pad2(d.getUTCSeconds()) + 'Z';
+}
+
+function buildICS(days) {
+  var L = [];
+  L.push('BEGIN:VCALENDAR');
+  L.push('VERSION:2.0');
+  L.push('PRODID:-//FishTodo//CN');
+  L.push('CALSCALE:GREGORIAN');
+  L.push('METHOD:PUBLISH');
+  L.push('X-WR-CALNAME:' + icsEsc('鱼鱼清单'));
+  var stamp = utcStamp(new Date());
+
+  days.forEach(function (ds) {
+    actsForDate(ds).forEach(function (a) {
+      var t = a.task;
+      L.push('BEGIN:VEVENT');
+      L.push('UID:' + t.id + '-' + ds + '@fishtodo');
+      L.push('DTSTAMP:' + stamp);
+      L.push('DTSTART:' + utcStamp(a.start));
+      if (a.end.getTime() > a.start.getTime()) L.push('DTEND:' + utcStamp(a.end));
+      L.push('SUMMARY:' + icsEsc(t.title));
+      if (t.note) L.push('DESCRIPTION:' + icsEsc(t.note));
+      L.push('STATUS:CONFIRMED');
+      L.push('TRANSP:OPAQUE');
+
+      var rb = Math.max(0, Number(t.remindBefore) || 0);
+      if (rb > 0) {
+        L.push('BEGIN:VALARM');
+        L.push('TRIGGER:-PT' + rb + 'M');
+        L.push('ACTION:DISPLAY');
+        L.push('DESCRIPTION:' + icsEsc('还有 ' + rb + ' 分钟：' + t.title));
+        L.push('END:VALARM');
+      }
+      var dw = Math.max(0, Number(t.dueWarn) || 0);
+      var dur = Math.max(0, Number(t.duration) || 0);
+      if (dw > 0) {
+        L.push('BEGIN:VALARM');
+        if (dur > 0) {
+          // 锚在「结束时间」往前推，永远不会算成负数
+          L.push('TRIGGER;RELATED=END:-PT' + Math.min(dw, dur) + 'M');
+        } else {
+          // 没设时长，就在开始那一刻提醒
+          L.push('TRIGGER:PT0M');
+        }
+        L.push('ACTION:DISPLAY');
+        L.push('DESCRIPTION:' + icsEsc('快截止了：' + t.title));
+        L.push('END:VALARM');
+      }
+      L.push('END:VEVENT');
+    });
+  });
+
+  L.push('END:VCALENDAR');
+  return L.join('\r\n');
+}
+
+function downloadFile(name, text, mime) {
+  try {
+    var blob = new Blob([text], { type: mime || 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      try { URL.revokeObjectURL(url); } catch (e) { }
+      if (a.parentNode) a.parentNode.removeChild(a);
+    }, 2500);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function exportCalendar(days) {
+  days = Number(days) || 7;
+  var base = new Date();
+  var dates = [];
+  for (var i = 0; i < days; i++) dates.push(ymd(addDays(base, i)));
+  var any = false;
+  for (var j = 0; j < dates.length; j++) { if (actsForDate(dates[j]).length) { any = true; break; } }
+  if (!any) { toast('这些天还没有任务，先加一个吧'); return; }
+
+  var txt = buildICS(dates);
+  var name = 'fishtodo-' + todayStr().replace(/-/g, '') + '.ics';
+
+  // 装成 App 时，交给原生写文件 + 唤起日历（WebView 里浏览器下载是没反应的）
+  var bridge = window.AndroidBridge;
+  if (bridge && bridge.saveAndOpen) {
+    var r = '';
+    try {
+      r = String(bridge.saveAndOpen(name, txt, 'text/calendar'));
+    } catch (e) {
+      r = 'err:' + e;
+    }
+    if (r === 'ok') { toast('导出好了，选日历 App 导入就行', 5000); return; }
+    if (r === 'saved') { toast('文件存好了，去文件管理里找 ' + name, 6000); return; }
+  }
+
+  var ok = downloadFile(name, txt, 'text/calendar;charset=utf-8');
+  toast(ok ? '导出好了，点开文件导入系统日历' : '导出失败，换个浏览器再试', 5000);
+}
+
+/* =========================================================
+   9. 事件
+   ========================================================= */
+function findAct(el) {
+  var n = el;
+  while (n && n !== document) {
+    if (n.getAttribute && n.getAttribute('data-act')) return n;
+    n = n.parentNode;
+  }
+  return null;
+}
+
+function ensureSelInMonth() {
+  var sd = UI.selDate ? parseYmd(UI.selDate) : null;
+  if (!sd || isNaN(sd.getTime()) || sd.getFullYear() !== UI.calY || sd.getMonth() !== UI.calM) {
+    UI.selDate = ymd(new Date(UI.calY, UI.calM, 1));
+  }
+}
+
+function switchTab(tab) {
+  if (UI.tab === tab) { viewEl && (viewEl.scrollTop = 0); return; }
+  UI.tab = tab;
+  render();
+}
+
+function onClick(e) {
+  var el = findAct(e.target);
+  if (!el) return;
+  var act = el.getAttribute('data-act');
+  var id = el.getAttribute('data-id');
+  var date = el.getAttribute('data-date');
+  var now = new Date();
+
+  switch (act) {
+    case 'tab': switchTab(el.getAttribute('data-tab')); break;
+
+    case 'new': openEditor(null); break;
+    case 'edit': openEditor(id); break;
+    case 'closeSheet': closeSheet(); break;
+
+    case 'step':
+      toggleStep(id, date, el.getAttribute('data-step'));
+      render(true);
+      break;
+
+    case 'done':
+      toggleAll(id, date);
+      render(true);
+      break;
+
+    case 'pickDate': {
+      var ds = date;
+      UI.selDate = ds;
+      var dd = parseYmd(ds);
+      if (dd.getFullYear() !== UI.calY || dd.getMonth() !== UI.calM) {
+        UI.calY = dd.getFullYear();
+        UI.calM = dd.getMonth();
+      }
+      render(true);
+      break;
+    }
+
+    case 'calPrev':
+      UI.calM--;
+      if (UI.calM < 0) { UI.calM = 11; UI.calY--; }
+      ensureSelInMonth();
+      render(true);
+      break;
+
+    case 'calNext':
+      UI.calM++;
+      if (UI.calM > 11) { UI.calM = 0; UI.calY++; }
+      ensureSelInMonth();
+      render(true);
+      break;
+
+    case 'calToday':
+      UI.calY = now.getFullYear();
+      UI.calM = now.getMonth();
+      UI.selDate = todayStr();
+      render(true);
+      break;
+
+    case 'calSync': exportCalendar(el.getAttribute('data-days')); break;
+
+    case 'toggle': {
+      var key = el.getAttribute('data-key');
+      if (key === 'browserNotify' && !DB.settings.browserNotify) requestBrowserNotify();
+      else { DB.settings[key] = !DB.settings[key]; save(); render(true); }
+      break;
+    }
+
+    case 'theme':
+      DB.settings.theme = el.getAttribute('data-v');
+      save();
+      applyTheme();
+      render(true);
+      break;
+
+    case 'exportJSON': {
+      var okJson = downloadFile('fishtodo-backup-' + todayStr().replace(/-/g, '') + '.json',
+        JSON.stringify(DB, null, 2), 'application/json');
+      toast(okJson ? '备份文件已经导出了' : '导出失败，换个浏览器试试');
+      break;
+    }
+
+    case 'importJSON': {
+      var inp = $('#importFile');
+      if (!inp) { toast('找不到文件选择器，刷新一下页面'); break; }
+      inp.onchange = function () { onViewChange({ target: inp }); };
+      inp.click();
+      break;
+    }
+
+    case 'wipe':
+      if (!confirm('清空全部任务和打卡记录？这个不能撤销。')) return;
+      if (!confirm('真的确定吗？建议先点上面「备份数据」存一份。')) return;
+      DB = blankDB();
+      saveNow();
+      applyTheme();
+      render();
+      toast('清空了');
+      break;
+
+    /* --- 编辑弹窗内部 --- */
+    case 'pickKind': {
+      var v = el.getAttribute('data-v');
+      if (!UI.draft) break;
+      if (v === 'once') {
+        UI.draft.kind = 'once';
+      } else {
+        UI.draft.kind = 'recurring';
+        UI.draft.repeat = v;
+      }
+      $$('[data-act="pickKind"]', $('#sheetBody')).forEach(function (b) {
+        b.classList.toggle('on', b.getAttribute('data-v') === v);
+      });
+      $('#repeatBox').innerHTML = repeatBoxHTML();
+      break;
+    }
+
+    case 'pickWeek': {
+      if (!UI.draft) break;
+      var wv = Number(el.getAttribute('data-v'));
+      var arr = UI.draft.weekdays || [];
+      var wi = arr.indexOf(wv);
+      if (wi >= 0) arr.splice(wi, 1); else arr.push(wv);
+      UI.draft.weekdays = arr;
+      $('#repeatBox').innerHTML = repeatBoxHTML();
+      break;
+    }
+
+    case 'pickMonthDay': {
+      if (!UI.draft) break;
+      var raw = el.getAttribute('data-v');
+      var val = raw === 'last' ? 'last' : Number(raw);
+      var mdArr = UI.draft.monthDays || [];
+      var mi = mdArr.map(function (x) { return x === 'last' ? 'last' : Number(x); }).indexOf(val);
+      if (mi >= 0) mdArr.splice(mi, 1); else mdArr.push(val);
+      UI.draft.monthDays = mdArr;
+      $('#repeatBox').innerHTML = repeatBoxHTML();
+      break;
+    }
+
+    case 'addStep':
+      if (!UI.draft) break;
+      UI.draft.steps = UI.draft.steps || [];
+      UI.draft.steps.push({ id: uid(), text: '' });
+      $('#stepEdit').innerHTML = stepRowsHTML();
+      var ins = $$('#stepEdit .sin');
+      if (ins.length) ins[ins.length - 1].focus();
+      break;
+
+    case 'delStep': {
+      if (!UI.draft) break;
+      var sid = el.getAttribute('data-stepid');
+      UI.draft.steps = (UI.draft.steps || []).filter(function (s) { return s.id !== sid; });
+      $('#stepEdit').innerHTML = stepRowsHTML();
+      break;
+    }
+
+    case 'saveTask': saveTask(); break;
+    case 'deleteTask': deleteTask(); break;
+    default: break;
+  }
+}
+
+function onSheetInput(e) {
+  var t = e.target;
+  if (!t || !t.getAttribute) return;
+  if (!UI.draft) return;
+
+  if (t.getAttribute('data-f')) {
+    var k = t.getAttribute('data-f');
+    if (t.type === 'number') UI.draft[k] = t.value === '' ? '' : Number(t.value);
+    else UI.draft[k] = t.value;
+    return;
+  }
+  if (t.getAttribute('data-stepid')) {
+    var sid = t.getAttribute('data-stepid');
+    var steps = UI.draft.steps || [];
+    for (var i = 0; i < steps.length; i++) {
+      if (steps[i].id === sid) { steps[i].text = t.value; break; }
+    }
+  }
+}
+
+function requestBrowserNotify() {
+  var called = false;
+  var done = function (result) {
+    if (called) return;
+    called = true;
+    // 回调 / Promise 传回来的是 'granted'|'denied'|'default'，不是布尔
+    var granted = (result === 'granted') || (result === true);
+    DB.settings.browserNotify = granted;
+    save();
+    render(true);
+    toast(granted ? '系统通知开了（页面开着时才有效）' : '没给权限，那就用「同步到日历」吧', 4200);
+  };
+  if (!('Notification' in window)) { toast('这个浏览器不支持系统通知'); return; }
+  if (Notification.permission === 'granted') { done(true); return; }
+  if (Notification.permission === 'denied') { toast('通知权限被拒绝了，去浏览器设置里手动打开'); return; }
+  try {
+    var p = Notification.requestPermission(done);
+    if (p && p.then) p.then(done).catch(function () { done(false); });
+  } catch (err) {
+    try { Notification.requestPermission(done); } catch (e2) { done(false); }
+  }
+}
+
+function onViewChange(e) {
+  var t = e.target;
+  if (!t || t.id !== 'importFile') return;
+  var f = t.files && t.files[0];
+  if (!f) return;
+  var fr = new FileReader();
+  fr.onload = function () {
+    var d = null;
+    try { d = JSON.parse(String(fr.result)); } catch (err) { d = null; }
+    if (!d || !Array.isArray(d.tasks)) { toast('这个文件不对，导入失败'); return; }
+    if (!confirm('导入会覆盖当前数据（现在有 ' + DB.tasks.length + ' 个任务），继续吗？')) return;
+    try {
+      localStorage.setItem(KEY, JSON.stringify(d));
+      location.reload();
+    } catch (err2) {
+      toast('写入失败，可能是存储空间不够');
+    }
+  };
+  fr.readAsText(f);
+}
+
+/* =========================================================
+   10. 启动
+   ========================================================= */
+function seed() {
+  DB.tasks.push({
+    id: uid(),
+    title: '读 20 页书',
+    note: '这是个示例，可以改掉或者删掉',
+    kind: 'recurring', repeat: 'daily', every: 1,
+    weekdays: [], monthDays: [],
+    startDate: todayStr(), endDate: null, date: todayStr(),
+    time: '21:00', duration: 30, remindBefore: 10, dueWarn: 10,
+    steps: [
+      { id: uid(), text: '挑一本书' },
+      { id: uid(), text: '读 10 页' },
+      { id: uid(), text: '再读 10 页' }
+    ],
+    archived: false, createdAt: Date.now()
+  });
+  saveNow();
+}
+
+var lastMinute = -1;
+
+function boot() {
+  var firstRun = false;
+  try { firstRun = !localStorage.getItem(KEY); } catch (e) { firstRun = false; }
+
+  DB = loadDB();
+  if (firstRun && !DB.tasks.length) seed();
+
+  var now = new Date();
+  UI.calY = now.getFullYear();
+  UI.calM = now.getMonth();
+  UI.selDate = todayStr();
+
+  render();
+
+  document.addEventListener('click', onClick);
+  var sb = $('#sheetBody');
+  if (sb) sb.addEventListener('input', onSheetInput);
+  var vw = $('#view');
+  if (vw) {
+    vw.addEventListener('scroll', function () { UI.scroll[UI.tab] = this.scrollTop; }, { passive: true });
+  }
+
+  var onTheme = function () { if (DB.settings.theme === 'auto') applyTheme(); };
+  if (mql) {
+    if (mql.addEventListener) mql.addEventListener('change', onTheme);
+    else if (mql.addListener) mql.addListener(onTheme);
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) {
+      reminderTick();
+      if (UI.tab === 'today' || UI.tab === 'calendar') render(true);
+    }
+  });
+
+  setTimeout(reminderTick, 1200);
+  setInterval(function () {
+    reminderTick();
+    var m = new Date().getMinutes();
+    if (m !== lastMinute) {
+      lastMinute = m;
+      if (UI.tab === 'today') render(true);
+    }
+  }, 20000);
+
+  window.addEventListener('beforeunload', saveNow);
+}
+
+window.addEventListener('error', function (e) {
+  try { toast('出错了：' + (e && e.message ? e.message : '未知错误'), 5000); } catch (x) { }
+});
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function () { safeBoot(); });
+} else {
+  safeBoot();
+}
+
+function safeBoot() {
+  try {
+    boot();
+  } catch (err) {
+    var v = document.getElementById('view');
+    var msg = String((err && err.message) || err || '未知错误');
+    if (v) {
+      v.innerHTML = '<div class="empty"><div class="ico">😵</div><h3>启动的时候出错了</h3>'
+        + '<p style="color:var(--danger)">' + esc(msg) + '</p>'
+        + '<p style="margin-top:12px">换个浏览器（Chrome / Edge / 夸克）试试，'
+        + '<br>或者把这个报错发给我。</p></div>';
+    }
+  }
+}
+})();
+</script>
+</body>
+</html>
